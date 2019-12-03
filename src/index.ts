@@ -17,10 +17,8 @@ export const getId = (element: WithGunId) =>
 
 export const getPub = (id: string) => {
   let match;
-  if ((match = /^~([^@].*)$/.exec(id))) {
+  if ((match = /~([^@][^\.]+\.[^\.]+)/.exec(id))) {
     return match[1];
-  } else if ((match = /^(.*)~(.*)\.$/.exec(id))) {
-    return match[2];
   }
 };
 
