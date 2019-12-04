@@ -104,8 +104,10 @@ export const put = async (
   value: GunValue,
   pair: Pair
 ) => {
+  const originalValue = value;
   if (pair && pair.epriv && value && typeof value !== "object") {
     value = await Gun.SEA.encrypt(value, pair);
+    seaMemo[value] = originalValue as Primitive;
   }
 
   if (pair && pair.priv) {
@@ -126,21 +128,56 @@ export const put = async (
     .put(value);
 };
 
-export const useGun = (Gun: GUN, useState: any, pair: Pair) => {
+export const useGun = (Gun: GUN, gun: Gun, useState: any, pair: Pair) => {
   const [data, setData] = useState({}) as [
     GunStore,
     (cb: (data: GunStore) => GunStore) => void
   ];
+  const [debouncer] = useState(new Debouncer(setData));
 
   // fetch data
   const onData = async (element: WithGunId & GunNode, key: string) => {
     const id = getId(element) || key;
     const decrypted = await decrypt(Gun, element, pair);
-    setData((data: GunStore) => ({
+    debouncer.setData((data: GunStore) => ({
       ...data,
-      [id]: decrypted
+      [id]: { ...data[id], ...decrypted }
     }));
   };
 
-  return [data, onData];
+  const puts = (...values: [string, string, Primitive | Ref][]) => {
+    setData((data: GunStore) =>
+      values.reduce(
+        (data, [id, key, value]) => ({
+          ...data,
+          [id]: { _: { "#": id }, ...data[id], [key]: value }
+        }),
+        data
+      )
+    );
+    for (const [id, key, value] of values) {
+      put(Gun, gun, id, key, value, pair);
+    }
+  };
+
+  return [data, onData, puts];
 };
+
+class Debouncer {
+  private handler: any;
+  private updates: any[] = [];
+  constructor(private cb: any) {}
+  setData(update: any) {
+    this.updates.push(update);
+    if (!this.handler) {
+      this.handler = setTimeout(() => {
+        const updates = this.updates;
+        this.cb((data: any) =>
+          updates.reduce((data, update) => update(data), data)
+        );
+        this.updates = [];
+        this.handler = null;
+      }, 15);
+    }
+  }
+}
