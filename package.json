@@ -10,9 +10,15 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "markdown-it": "^10.0.0",
+    "markdown-it-iframe": "^1.0.0",
+    "markdown-it-wikilinks": "^1.0.1"
+  },
   "devDependencies": {
     "@types/jest": "^24.0.22",
+    "@types/markdown-it": "0.0.9",
+    "@types/node": "^12.12.15",
     "jest": "^24.9.0",
     "ts-jest": "^24.1.0",
     "tslint": "^5.20.1",
