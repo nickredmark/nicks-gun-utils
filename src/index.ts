@@ -9,6 +9,9 @@ import {
   GUN,
   GunStore
 } from "./models";
+import MD from "markdown-it";
+const WikiLinks = require("markdown-it-wikilinks");
+const IFrame = require("markdown-it-iframe");
 
 export const getUUID = (gun: Gun) => gun.opt()._.opt.uuid();
 
@@ -143,4 +146,33 @@ export const useGun = (Gun: GUN, useState: any, pair: Pair) => {
   };
 
   return [data, onData];
+};
+
+export const getMd = ({
+  pub,
+  base,
+  hash
+}: {
+  pub?: string;
+  base?: string;
+  hash?: string;
+}) => {
+  MD()
+    .use(IFrame())
+    .use(
+      WikiLinks({
+        baseURL: `${base}?id=`,
+        uriSuffix: hash,
+        makeAllLinksAbsolute: true,
+        postProcessPageName: (pageName: string) => {
+          pageName = pageName.trim();
+          if (pageName === "/") {
+            pageName = "";
+          } else {
+            pageName = `.${pageName}`;
+          }
+          return encodeURIComponent((pub ? `~${pub}` : "") + pageName);
+        }
+      })
+    );
 };
