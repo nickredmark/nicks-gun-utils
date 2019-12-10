@@ -197,7 +197,9 @@ export const useGun = (
     }));
   };
 
-  const puts = (...values: [string, string, Primitive | Ref][]) => {
+  const puts = (
+    ...values: [string, string, Primitive | Ref, Pair | undefined][]
+  ) => {
     setData((data: GunStore) =>
       values.reduce(
         (data, [id, key, value]) => ({
@@ -207,8 +209,8 @@ export const useGun = (
         data
       )
     );
-    for (const [id, key, value] of values) {
-      put(Gun, gun, id, key, value, pair);
+    for (const [id, key, value, otherPair] of values) {
+      put(Gun, gun, id, key, value, otherPair || pair);
     }
   };
 
