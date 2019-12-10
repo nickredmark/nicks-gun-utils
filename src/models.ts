@@ -52,8 +52,8 @@ export type GunStore = {
 export type SEA = {
   pair: () => Pair;
   sign: (message: SignedMessage, pair: AuthPair) => Promise<string>;
-  encrypt: (value: Primitive, pair: Pair) => Promise<string>;
-  decrypt: (value: Primitive, pair: Pair) => Promise<string>;
+  encrypt: (value: Primitive, pair: EncryptionPair) => Promise<string>;
+  decrypt: (value: Primitive, pair: EncryptionPair) => Promise<string>;
 };
 
 export type SignedMessage = {
@@ -68,7 +68,15 @@ export type AuthPair = {
   pub: string;
 };
 
+type EncryptionPair = {
+  epriv: string;
+};
+
 export type Pair = AuthPair & {
   epriv: string;
   epub: string;
+};
+
+export type ExtendedPair = Pair & {
+  oepriv?: string;
 };
