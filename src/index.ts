@@ -7,7 +7,8 @@ import {
   Ref,
   GunValue,
   GUN,
-  GunStore
+  GunStore,
+  ExtendedPair
 } from "./models";
 import MD from "markdown-it";
 import { stringify } from "qs";
@@ -27,13 +28,35 @@ export const getPub = (id: string) => {
   }
 };
 
+export const getTargetPub = (id: string) => {
+  let match;
+  if ((match = /~[^@][^\.]+\.[^\.]+.*~([^@][^\.]+\.[^\.]+)$/.exec(id))) {
+    return match[1];
+  }
+};
+
 export const getSubUUID = (gun: Gun, pub: string) =>
   pub ? `${getUUID(gun)}~${pub}.` : getUUID(gun);
 
 const seaMemo: { [key: string]: Primitive } = {};
+const eprivsMemo: { [pub: string]: string } = {};
+const oeprivsMemo: { [pub: string]: string } = {};
 
-export const decrypt = async (Gun: GUN, node: GunNode, pair: Pair) => {
+export const decrypt = async (
+  Gun: GUN,
+  node: GunNode & WithGunId,
+  pair: ExtendedPair
+) => {
+  if (pair.epriv) {
+    eprivsMemo[pair.pub] = pair.epriv;
+  }
+  if (pair.oepriv) {
+    oeprivsMemo[pair.pub] = pair.oepriv;
+  }
   node = { ...node };
+  const id = getId(node);
+  const pub = getPub(id)!;
+  const targetPub = getTargetPub(id);
   for (const key of Object.keys(node)) {
     const value = node[key];
     if (typeof value === "string" && value.startsWith("SEA{")) {
@@ -41,13 +64,25 @@ export const decrypt = async (Gun: GUN, node: GunNode, pair: Pair) => {
         node[key] = seaMemo[value];
       } else {
         try {
-          const actualValue = await Gun.SEA.decrypt(value, pair);
-          node[key] = actualValue;
-          seaMemo[value] = actualValue;
+          const epriv = key === "priv" ? oeprivsMemo[pub!] : eprivsMemo[pub!];
+          if (!epriv) {
+            throw new Error(`No known epriv for this pub.`);
+          }
+          const actualValue = await Gun.SEA.decrypt(value, { epriv });
+          if (actualValue === undefined) {
+            throw new Error("Encryption failed");
+          } else {
+            node[key] = actualValue;
+            seaMemo[value] = actualValue;
+          }
         } catch (e) {
           delete node[key];
+          continue;
         }
       }
+    }
+    if (key === "epriv" && targetPub) {
+      eprivsMemo[targetPub] = node[key] as string;
     }
   }
   return node;
@@ -107,24 +142,31 @@ export const put = async (
   id: string,
   key: string,
   value: GunValue,
-  pair: Pair
+  pair: ExtendedPair
 ) => {
-  if (pair && pair.epriv && value && typeof value !== "object") {
-    const encryptedValue = await Gun.SEA.encrypt(value, pair);
-    seaMemo[encryptedValue] = value;
-    value = encryptedValue;
-  }
+  if (pair) {
+    if (value && typeof value !== "object") {
+      let epriv = pair.oepriv && key === "priv" ? pair.oepriv : pair.epriv;
+      if (epriv) {
+        const encryptedValue = await Gun.SEA.encrypt(value, {
+          epriv
+        });
+        seaMemo[encryptedValue] = value;
+        value = encryptedValue;
+      }
+    }
 
-  if (pair && pair.priv) {
-    value = await Gun.SEA.sign(
-      {
-        "#": id,
-        ".": key,
-        ":": value,
-        ">": Gun.state()
-      },
-      pair
-    );
+    if (pair.priv) {
+      value = await Gun.SEA.sign(
+        {
+          "#": id,
+          ".": key,
+          ":": value,
+          ">": Gun.state()
+        },
+        pair
+      );
+    }
   }
 
   gun
@@ -133,7 +175,12 @@ export const put = async (
     .put(value);
 };
 
-export const useGun = (Gun: GUN, gun: Gun, useState: any, pair: Pair) => {
+export const useGun = (
+  Gun: GUN,
+  gun: Gun,
+  useState: any,
+  pair: ExtendedPair
+) => {
   const [data, setData] = useState({}) as [
     GunStore,
     (cb: (data: GunStore) => GunStore) => void
