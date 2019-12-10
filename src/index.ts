@@ -196,22 +196,26 @@ export const getMd = ({
   base?: string;
   hash?: string;
 }) => {
-  return MD().use(
-    WikiLinks({
-      baseURL: `${base || ""}?id=`,
-      uriSuffix: hash,
-      makeAllLinksAbsolute: true,
-      postProcessPageName: (pageName: string) => {
-        pageName = pageName.trim();
-        if (pageName === "/") {
-          pageName = "";
-        } else {
-          pageName = `.${pageName}`;
-        }
-        return encodeURIComponent((pub ? `~${pub}` : "") + pageName);
-      }
+  return MD()
+    .use(IFrame, {
+      height: 300
     })
-  );
+    .use(
+      WikiLinks({
+        baseURL: `${base || ""}?id=`,
+        uriSuffix: hash,
+        makeAllLinksAbsolute: true,
+        postProcessPageName: (pageName: string) => {
+          pageName = pageName.trim();
+          if (pageName === "/") {
+            pageName = "";
+          } else {
+            pageName = `.${pageName}`;
+          }
+          return encodeURIComponent((pub ? `~${pub}` : "") + pageName);
+        }
+      })
+    );
 };
 
 export const qs = (o: { [key: string]: Primitive }, p: string) => {
