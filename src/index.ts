@@ -10,6 +10,8 @@ import {
   GunStore
 } from "./models";
 import MD from "markdown-it";
+import { stringify } from "qs";
+
 const WikiLinks = require("markdown-it-wikilinks");
 const IFrame = require("markdown-it-iframe");
 
@@ -194,22 +196,31 @@ export const getMd = ({
   base?: string;
   hash?: string;
 }) => {
-  MD()
-    .use(IFrame())
-    .use(
-      WikiLinks({
-        baseURL: `${base}?id=`,
-        uriSuffix: hash,
-        makeAllLinksAbsolute: true,
-        postProcessPageName: (pageName: string) => {
-          pageName = pageName.trim();
-          if (pageName === "/") {
-            pageName = "";
-          } else {
-            pageName = `.${pageName}`;
-          }
-          return encodeURIComponent((pub ? `~${pub}` : "") + pageName);
+  return MD().use(
+    WikiLinks({
+      baseURL: `${base || ""}?id=`,
+      uriSuffix: hash,
+      makeAllLinksAbsolute: true,
+      postProcessPageName: (pageName: string) => {
+        pageName = pageName.trim();
+        if (pageName === "/") {
+          pageName = "";
+        } else {
+          pageName = `.${pageName}`;
         }
-      })
-    );
+        return encodeURIComponent((pub ? `~${pub}` : "") + pageName);
+      }
+    })
+  );
+};
+
+export const qs = (o: { [key: string]: Primitive }, p: string) => {
+  const object: { [key: string]: Primitive } = {};
+  for (const key of Object.keys(o)) {
+    if (o[key]) {
+      object[key] = o[key];
+    }
+  }
+  const stringified = stringify(object);
+  return stringified ? `${p}${stringified}` : "";
 };
