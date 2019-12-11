@@ -47,11 +47,13 @@ export const decrypt = async (
   node: GunNode & WithGunId,
   pair: ExtendedPair
 ) => {
-  if (pair.epriv) {
-    eprivsMemo[pair.pub] = pair.epriv;
-  }
-  if (pair.oepriv) {
-    oeprivsMemo[pair.pub] = pair.oepriv;
+  if (pair) {
+    if (pair.epriv) {
+      eprivsMemo[pair.pub] = pair.epriv;
+    }
+    if (pair.oepriv) {
+      oeprivsMemo[pair.pub] = pair.oepriv;
+    }
   }
   node = { ...node };
   const id = getId(node);
